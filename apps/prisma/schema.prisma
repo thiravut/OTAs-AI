@@ -6,4 +6,79 @@ datasource db {
   provider = "postgresql"
 }
 
-// Tables will be created per story starting from Story 1.2
+// === Enums ===
+
+enum Role {
+  OWNER
+  REVENUE_MANAGER
+  FRONT_DESK
+  SYSTEM_ADMIN
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  EXPIRED
+}
+
+// === Models (Epic 1) ===
+
+model User {
+  id                  String    @id @default(uuid())
+  email               String    @unique
+  name                String
+  passwordHash        String
+  role                Role      @default(OWNER)
+  notificationChannel String?
+  lineUserId          String?
+  telegramChatId      String?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  deletedAt           DateTime?
+
+  ownedHotels     Hotel[]      @relation("HotelOwner")
+  hotelAccess     HotelUser[]
+  sentInvitations Invitation[] @relation("InvitationSender")
+}
+
+model Hotel {
+  id         String    @id @default(uuid())
+  name       String
+  location   String?
+  totalRooms Int       @default(0)
+  ownerId    String
+  owner      User      @relation("HotelOwner", fields: [ownerId], references: [id])
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  deletedAt  DateTime?
+
+  members     HotelUser[]
+  invitations Invitation[]
+}
+
+model HotelUser {
+  id        String   @id @default(uuid())
+  userId    String
+  hotelId   String
+  role      Role
+  user      User     @relation(fields: [userId], references: [id])
+  hotel     Hotel    @relation(fields: [hotelId], references: [id])
+  createdAt DateTime @default(now())
+
+  @@unique([userId, hotelId])
+}
+
+model Invitation {
+  id        String           @id @default(uuid())
+  email     String
+  hotelId   String
+  role      Role
+  status    InvitationStatus @default(PENDING)
+  senderId  String
+  sender    User             @relation("InvitationSender", fields: [senderId], references: [id])
+  hotel     Hotel            @relation(fields: [hotelId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime         @default(now())
+
+  @@unique([email, hotelId])
+}

@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import "bootstrap/dist/css/bootstrap.min.css";
 import "@/styles/globals.scss";
+import SessionProvider from "@/components/ui/session-provider";
 
 export const metadata: Metadata = {
   title: "RateGenie — AI Revenue Assistant",
@@ -26,7 +27,9 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <SessionProvider>{children}</SessionProvider>
+      </body>
     </html>
   );
 }
