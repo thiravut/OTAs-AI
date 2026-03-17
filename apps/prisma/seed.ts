@@ -272,6 +272,101 @@ async function main() {
   }
   console.log("Sync logs: 2");
 
+  // === Pricing Rules (MVP-1 Epic 8) ===
+  await prisma.pricingRule.deleteMany({ where: { hotelId: hotel.id } });
+
+  await prisma.pricingRule.create({
+    data: {
+      hotelId: hotel.id,
+      name: "Occupancy สูง → ขึ้นราคา",
+      description: "ถ้า occupancy สูงกว่า 80% → ขึ้นราคา 10%",
+      enabled: true,
+      priority: 10,
+      roomTypeIds: [],
+      conditions: [{ metric: "occupancy", operator: ">", value: 80 }],
+      action: { type: "adjust_price", direction: "up", amount: 10, unit: "percent" },
+      template: "high_occupancy_up",
+    },
+  });
+
+  await prisma.pricingRule.create({
+    data: {
+      hotelId: hotel.id,
+      name: "วันหยุด → ขึ้นราคา 15%",
+      description: "วันเสาร์-อาทิตย์ → ขึ้นราคาอัตโนมัติ",
+      enabled: true,
+      priority: 5,
+      roomTypeIds: [],
+      conditions: [{ metric: "day_of_week", operator: "in", value: [0, 6] }],
+      action: { type: "adjust_price", direction: "up", amount: 15, unit: "percent" },
+      template: "weekend_up",
+    },
+  });
+
+  await prisma.pricingRule.create({
+    data: {
+      hotelId: hotel.id,
+      name: "Occupancy ต่ำ → ลดราคา",
+      description: "ถ้า occupancy ต่ำกว่า 40% → ลดราคา 10%",
+      enabled: false,
+      priority: 3,
+      roomTypeIds: [],
+      conditions: [{ metric: "occupancy", operator: "<", value: 40 }],
+      action: { type: "adjust_price", direction: "down", amount: 10, unit: "percent" },
+      template: "low_occupancy_down",
+    },
+  });
+
+  console.log("Pricing rules: 3");
+
+  // === Competitors (MVP-1 Epic 9) ===
+  await prisma.competitorRate.deleteMany();
+  await prisma.competitor.deleteMany({ where: { hotelId: hotel.id } });
+
+  const competitors = [
+    { name: "The Royal Palm Resort", location: "ภูเก็ต", starRating: 4 },
+    { name: "Andaman Breeze Hotel", location: "ภูเก็ต", starRating: 3 },
+    { name: "Sea Pearl Boutique", location: "ภูเก็ต", starRating: 4 },
+    { name: "Phuket Garden Inn", location: "ภูเก็ต", starRating: 3 },
+    { name: "Sunset Beach Resort", location: "ภูเก็ต", starRating: 4 },
+  ];
+
+  for (const comp of competitors) {
+    const competitor = await prisma.competitor.create({
+      data: { hotelId: hotel.id, ...comp },
+    });
+
+    // Generate 14 days of rates
+    for (let d = 0; d < 14; d++) {
+      const date = new Date();
+      date.setDate(date.getDate() + d);
+      date.setHours(0, 0, 0, 0);
+      const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
+      for (const ota of ["Agoda", "Booking.com"]) {
+        for (const roomType of ["Deluxe Room", "Superior Room", "Suite"]) {
+          const base = roomType === "Suite" ? 450000 : roomType === "Deluxe Room" ? 280000 : 200000;
+          const compFactor = comp.starRating === 4 ? 1.1 : 0.9;
+          const weekendFactor = isWeekend ? 1.15 : 1;
+          const variation = Math.round((Math.random() - 0.5) * 40000);
+          const price = Math.round(base * compFactor * weekendFactor + variation);
+
+          await prisma.competitorRate.create({
+            data: {
+              competitorId: competitor.id,
+              otaName: ota,
+              roomType,
+              date,
+              price,
+            },
+          });
+        }
+      }
+    }
+  }
+
+  console.log("Competitors: 5 with 14 days of rates");
+
   console.log("\n✅ Seed complete!");
   console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
   console.log("Login: demo@rategenie.co / password123");

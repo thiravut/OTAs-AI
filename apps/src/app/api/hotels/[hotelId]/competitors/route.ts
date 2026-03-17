@@ -26,10 +26,10 @@ export async function GET(
     include: {
       rates: {
         where: {
-          date: { gte: new Date() },
+          date: { gte: new Date(new Date().setHours(0, 0, 0, 0)) },
         },
         orderBy: { date: "asc" },
-        take: 100,
+        take: 200,
       },
     },
   });

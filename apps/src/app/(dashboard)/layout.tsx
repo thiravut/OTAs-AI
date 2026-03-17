@@ -10,6 +10,7 @@ const navItems = [
   { href: "/hotels", label: "โรงแรม" },
   { href: "/pricing", label: "ราคา" },
   { href: "/recommendations", label: "คำแนะนำ AI" },
+  { href: "/rules", label: "กฎราคา" },
   { href: "/competitors", label: "คู่แข่ง" },
   { href: "/revenue", label: "รายได้" },
 ];
