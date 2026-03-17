@@ -50,11 +50,11 @@ development_status:
   epic-1-retrospective: optional
 
   # Epic 2: Hotel Configuration & OTA Connection
-  epic-2: backlog
-  2-1-channex-integration-setup: backlog
-  2-2-ota-credentials-property-connection: backlog
-  2-3-room-type-mapping-pricing-boundaries: backlog
-  2-4-automated-ota-data-sync: backlog
+  epic-2: done
+  2-1-channex-integration-setup: done
+  2-2-ota-credentials-property-connection: done
+  2-3-room-type-mapping-pricing-boundaries: done
+  2-4-automated-ota-data-sync: done
   epic-2-retrospective: optional
 
   # Epic 3: AI Pricing Recommendations

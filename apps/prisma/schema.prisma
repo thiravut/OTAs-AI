@@ -21,6 +21,24 @@ enum InvitationStatus {
   EXPIRED
 }
 
+enum OtaConnectionStatus {
+  CONNECTED
+  ERROR
+  DISCONNECTED
+}
+
+enum BookingStatus {
+  CONFIRMED
+  CANCELLED
+  MODIFIED
+}
+
+enum SyncStatus {
+  RUNNING
+  SUCCESS
+  FAILED
+}
+
 // === Models (Epic 1) ===
 
 model User {
@@ -52,8 +70,13 @@ model Hotel {
   updatedAt  DateTime  @updatedAt
   deletedAt  DateTime?
 
-  members     HotelUser[]
-  invitations Invitation[]
+  members        HotelUser[]
+  invitations    Invitation[]
+  otaConnections OtaConnection[]
+  roomTypes      RoomType[]
+  rateSnapshots  RateSnapshot[]
+  bookings       Booking[]
+  syncLogs       SyncLog[]
 }
 
 model HotelUser {
@@ -81,4 +104,101 @@ model Invitation {
   createdAt DateTime         @default(now())
 
   @@unique([email, hotelId])
+}
+
+// === Models (Epic 2) ===
+
+model OtaConnection {
+  id                String              @id @default(uuid())
+  hotelId           String
+  hotel             Hotel               @relation(fields: [hotelId], references: [id])
+  otaName           String
+  channexPropertyId String
+  status            OtaConnectionStatus @default(CONNECTED)
+  lastSyncAt        DateTime?
+  lastError         String?
+  retryCount        Int                 @default(0)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+
+  @@unique([hotelId, otaName])
+}
+
+model RoomType {
+  id                 String   @id @default(uuid())
+  hotelId            String
+  hotel              Hotel    @relation(fields: [hotelId], references: [id])
+  name               String
+  minPrice           Int?
+  maxPrice           Int?
+  maxDiscountPercent Int?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+
+  otaMappings   OtaRoomMapping[]
+  rateSnapshots RateSnapshot[]
+  bookings      Booking[]
+}
+
+model OtaRoomMapping {
+  id            String   @id @default(uuid())
+  roomTypeId    String
+  roomType      RoomType @relation(fields: [roomTypeId], references: [id])
+  otaName       String
+  otaRoomTypeId String
+  otaRoomName   String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@unique([roomTypeId, otaName])
+}
+
+model RateSnapshot {
+  id         String   @id @default(uuid())
+  roomTypeId String
+  roomType   RoomType @relation(fields: [roomTypeId], references: [id])
+  hotelId    String
+  hotel      Hotel    @relation(fields: [hotelId], references: [id])
+  otaName    String
+  date       DateTime @db.Date
+  price      Int
+  currency   String   @default("THB")
+  syncedAt   DateTime @default(now())
+
+  @@unique([roomTypeId, otaName, date])
+  @@index([hotelId, date])
+}
+
+model Booking {
+  id               String        @id @default(uuid())
+  hotelId          String
+  hotel            Hotel         @relation(fields: [hotelId], references: [id])
+  channexBookingId String?       @unique
+  otaName          String
+  roomTypeId       String?
+  roomType         RoomType?     @relation(fields: [roomTypeId], references: [id])
+  guestName        String?
+  checkIn          DateTime      @db.Date
+  checkOut         DateTime      @db.Date
+  status           BookingStatus @default(CONFIRMED)
+  totalPrice       Int
+  currency         String        @default("THB")
+  rawData          Json?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([hotelId, checkIn])
+}
+
+model SyncLog {
+  id          String      @id @default(uuid())
+  hotelId     String
+  hotel       Hotel       @relation(fields: [hotelId], references: [id])
+  otaName     String
+  syncType    String
+  status      SyncStatus
+  error       String?
+  itemCount   Int         @default(0)
+  startedAt   DateTime    @default(now())
+  completedAt DateTime?
 }
