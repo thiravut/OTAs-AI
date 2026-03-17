@@ -1,0 +1,29 @@
+{
+  "name": "apps",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.79.0",
+    "@prisma/client": "^7.5.0",
+    "bootstrap": "^5.3.8",
+    "next": "16.1.7",
+    "next-auth": "^4.24.13",
+    "prisma": "^7.5.0",
+    "react": "19.2.3",
+    "react-bootstrap": "^2.10.10",
+    "react-dom": "19.2.3",
+    "sass": "^1.77.8",
+    "zod": "^4.3.6"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}

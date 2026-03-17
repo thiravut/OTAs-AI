@@ -1,0 +1,9 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Tables will be created per story starting from Story 1.2

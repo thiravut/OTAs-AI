@@ -1,0 +1,31 @@
+// RateGenie CSS Custom Properties
+:root {
+  --rg-primary: #2563EB;
+  --rg-primary-light: #DBEAFE;
+  --rg-primary-dark: #1D4ED8;
+  --rg-success: #16A34A;
+  --rg-success-light: #DCFCE7;
+  --rg-danger: #DC2626;
+  --rg-danger-light: #FEE2E2;
+  --rg-warning: #F59E0B;
+  --rg-warning-light: #FEF3C7;
+  --rg-info: #0EA5E9;
+  --rg-info-light: #E0F2FE;
+  --rg-gray-900: #1E293B;
+  --rg-gray-700: #334155;
+  --rg-gray-500: #64748B;
+  --rg-gray-300: #CBD5E1;
+  --rg-gray-100: #F1F5F9;
+  --rg-white: #FFFFFF;
+}
+
+body {
+  font-family: 'IBM Plex Thai', 'IBM Plex Sans', -apple-system, sans-serif;
+  color: var(--rg-gray-900);
+  background-color: var(--rg-white);
+}
+
+// Monospace for prices
+.font-mono {
+  font-family: 'IBM Plex Mono', monospace;
+}
