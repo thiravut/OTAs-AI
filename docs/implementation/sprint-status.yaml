@@ -80,3 +80,38 @@ development_status:
   5-3-ai-recommendations-queue: done
   5-4-revenue-comparison-analytics: done
   epic-5-retrospective: optional
+
+  # ══════════════════════════════════════
+  # MVP-1 — Scale Phase
+  # ══════════════════════════════════════
+
+  # Epic 6: Auto-Push Pricing to OTAs
+  epic-6: backlog
+  6-1-channex-write-api-integration: backlog
+  6-2-approval-auto-push-flow: backlog
+  6-3-push-status-tracking-rollback: backlog
+  6-4-rate-parity-enforcement: backlog
+  epic-6-retrospective: optional
+
+  # Epic 7: Additional OTA Integrations
+  epic-7: backlog
+  7-1-ota-adapter-factory-extensibility: backlog
+  7-2-expedia-integration: backlog
+  7-3-traveloka-integration: backlog
+  7-4-trip-com-integration: backlog
+  epic-7-retrospective: optional
+
+  # Epic 8: Automated Pricing Rules Engine
+  epic-8: backlog
+  8-1-rules-engine-core: backlog
+  8-2-rule-templates-management-ui: backlog
+  8-3-rule-execution-monitoring: backlog
+  8-4-ai-rules-hybrid-mode: backlog
+  epic-8-retrospective: optional
+
+  # Epic 9: Competitor Radar
+  epic-9: backlog
+  9-1-competitor-data-provider-integration: backlog
+  9-2-competitor-dashboard-radar-view: backlog
+  9-3-ai-competitor-aware-pricing: backlog
+  epic-9-retrospective: optional

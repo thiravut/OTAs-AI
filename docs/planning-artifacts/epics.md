@@ -524,3 +524,322 @@ So that **เห็นผลลัพธ์จริงว่า AI ช่วย
 **And** แสดง occupancy trend เปรียบเทียบ
 **And** สามารถเลือกช่วงเวลาเปรียบเทียบได้ (7 วัน, 30 วัน, 90 วัน)
 **And** สามารถ export ข้อมูลเป็น CSV/Excel ได้
+
+---
+
+# MVP-1 — Scale Phase
+
+## MVP-1 Functional Requirements
+
+- FR35: ระบบสามารถ push ราคาไป OTA ได้อัตโนมัติเมื่อผู้ใช้ approve คำแนะนำ
+- FR36: ระบบรองรับ rate parity enforcement ข้าม OTA เมื่อ push ราคา
+- FR37: ระบบสามารถ rollback ราคาที่ push ไปได้ถ้าเกิดข้อผิดพลาด
+- FR38: ระบบรองรับ OTA เพิ่มเติม: Expedia, Traveloka, Trip.com
+- FR39: เจ้าของโรงแรมสามารถสร้างกฎปรับราคาอัตโนมัติได้ (Rules Engine)
+- FR40: กฎสามารถทำงานร่วมกับ AI recommendations ได้ (Hybrid mode)
+- FR41: ระบบสามารถดึงข้อมูลราคาคู่แข่งจาก data provider ได้
+- FR42: เจ้าของโรงแรมสามารถดูราคาคู่แข่งในย่านเดียวกันบน dashboard ได้
+- FR43: AI สามารถนำข้อมูลคู่แข่งมาประกอบการแนะนำราคาได้
+
+### MVP-1 FR Coverage Map
+
+| FR | Epic | คำอธิบาย |
+|----|------|---------|
+| FR35 | Epic 6 | Auto-push ราคาไป OTA |
+| FR36 | Epic 6 | Rate parity enforcement |
+| FR37 | Epic 6 | Rollback ราคาที่ push |
+| FR38 | Epic 7 | เพิ่ม OTA: Expedia, Traveloka, Trip.com |
+| FR39 | Epic 8 | Rules Engine สร้างกฎปรับราคา |
+| FR40 | Epic 8 | AI + Rules Hybrid |
+| FR41 | Epic 9 | ดึงข้อมูลราคาคู่แข่ง |
+| FR42 | Epic 9 | Dashboard ราคาคู่แข่ง |
+| FR43 | Epic 9 | AI competitor-aware pricing |
+
+## MVP-1 Epic List
+
+### Epic 6: Auto-Push Pricing to OTAs
+เมื่อผู้ใช้ approve คำแนะนำ ระบบ push ราคาไป OTA ให้อัตโนมัติ — ไม่ต้องไปแก้เองบน extranet
+**FRs covered:** FR35, FR36, FR37
+
+### Epic 7: Additional OTA Integrations
+เพิ่ม OTA Adapter สำหรับ Expedia, Traveloka, Trip.com ผ่าน Channex — ขยาย channel distribution
+**FRs covered:** FR38
+
+### Epic 8: Automated Pricing Rules Engine
+เจ้าของโรงแรมสร้างกฎปรับราคาอัตโนมัติ เช่น "ถ้า occupancy > 80% → ขึ้นราคา 10%" — ทำงานร่วมกับ AI
+**FRs covered:** FR39, FR40
+
+### Epic 9: Competitor Radar
+ดูราคาคู่แข่งในย่านเดียวกัน + AI นำข้อมูลคู่แข่งมาประกอบการแนะนำราคา
+**FRs covered:** FR41, FR42, FR43
+
+---
+
+## Epic 6: Auto-Push Pricing to OTAs
+
+**Goal:** เมื่อผู้ใช้ approve คำแนะนำ ระบบ push ราคาไป Agoda/Booking.com อัตโนมัติผ่าน Channex write API
+**FRs:** FR35, FR36, FR37
+
+### Story 6.1: Channex Write API Integration
+
+As a **developer (Pond)**,
+I want **เชื่อมต่อ Channex Write API เพื่อ push ราคาไป OTA**,
+So that **ระบบสามารถปรับราคาบน OTA ได้อัตโนมัติ ไม่ต้องเข้า extranet เอง**.
+
+**Acceptance Criteria:**
+
+**Given** Channex Write API credentials ถูกตั้งค่า
+**When** ระบบเรียก rate update API
+**Then** สามารถ push ราคาใหม่ไป property/room type/date ที่ระบุได้
+**And** รองรับ push ไปหลาย OTA พร้อมกัน (Agoda + Booking.com)
+**And** Retry 3 ครั้ง exponential backoff เมื่อ push ล้มเหลว
+**And** ทุก push operation ถูก log ไว้ใน PriceUpdateLog (status, timestamp, OTA, response)
+**And** Mock mode สำหรับ development โดยไม่ push จริง
+
+### Story 6.2: Approval → Auto-Push Flow
+
+As a **เจ้าของโรงแรม**,
+I want **เมื่อ approve คำแนะนำ AI ราคาถูก push ไป OTA ให้อัตโนมัติ**,
+So that **ไม่ต้องไปแก้ราคาบน extranet เอง ประหยัดเวลา**.
+
+**Acceptance Criteria:**
+
+**Given** เจ้าของกด [อนุมัติ] คำแนะนำราคา
+**When** ระบบดำเนินการ push
+**Then** ราคาใหม่ถูก push ไปทุก OTA ที่เชื่อมต่อสำหรับ room type + วันที่ที่ระบุ
+**And** UI แสดงสถานะ push: "กำลัง push..." → "push สำเร็จ ✅" หรือ "push ล้มเหลว ❌"
+**And** เมื่อ push สำเร็จ recommendation status เปลี่ยนเป็น "อนุมัติ + push แล้ว"
+**And** เมื่อ push ล้มเหลว แสดง error + option retry
+**And** Batch approve → batch push ทำงานได้
+**And** ส่ง notification สรุปผล push ผ่าน LINE/Telegram
+
+### Story 6.3: Push Status Tracking & Rollback
+
+As a **เจ้าของโรงแรม**,
+I want **ดูสถานะ push ทุกรายการ และ rollback ราคาได้ถ้าจำเป็น**,
+So that **มั่นใจว่าราคาบน OTA ถูกต้อง และแก้ไขได้ถ้าผิดพลาด**.
+
+**Acceptance Criteria:**
+
+**Given** มี push history
+**When** เจ้าของเปิดหน้า push status
+**Then** เห็นรายการ push ทั้งหมด: วันเวลา, room type, OTA, ราคาเก่า → ราคาใหม่, สถานะ (สำเร็จ/ล้มเหลว)
+**And** กด [Rollback] → ระบบ push ราคาเดิมกลับไป OTA
+**And** Rollback ถูก log เป็น audit trail
+**And** แสดงสถานะ rollback: "กำลัง rollback..." → "rollback สำเร็จ"
+
+### Story 6.4: Rate Parity Enforcement
+
+As a **เจ้าของโรงแรม**,
+I want **ระบบ push ราคาเดียวกันไปทุก OTA (rate parity)**,
+So that **ไม่ละเมิด rate parity agreement กับ OTA**.
+
+**Acceptance Criteria:**
+
+**Given** เจ้าของ approve คำแนะนำสำหรับ room type หนึ่ง
+**When** ระบบ push ราคา
+**Then** ราคาเดียวกันถูก push ไปทุก OTA ที่มี room type mapping
+**And** ถ้า OTA ใดไม่มี mapping ข้าม OTA นั้น
+**And** ถ้า push สำเร็จบาง OTA ไม่สำเร็จบาง OTA → แจ้งเตือน + option retry เฉพาะที่ล้มเหลว
+**And** Rate parity check: ตรวจสอบว่าราคาทุก OTA ตรงกันหลัง push
+**And** ถ้าไม่ตรงกัน → แสดง warning badge บน rate parity view
+
+---
+
+## Epic 7: Additional OTA Integrations
+
+**Goal:** เพิ่ม OTA adapters สำหรับ Expedia, Traveloka, Trip.com ผ่าน Channex
+**FRs:** FR38
+
+### Story 7.1: OTA Adapter Factory & Extensibility
+
+As a **developer (Pond)**,
+I want **refactor OTA adapter layer เป็น factory pattern**,
+So that **เพิ่ม OTA ใหม่ได้โดยสร้างแค่ config + mapping ไม่ต้องเขียน code มาก**.
+
+**Acceptance Criteria:**
+
+**Given** OTA adapter layer ปัจจุบัน
+**When** refactor เป็น factory pattern
+**Then** แต่ละ OTA เป็น config object: { name, channexId, brandColor, logoUrl, rateMapping }
+**And** เพิ่ม OTA ใหม่โดยเพิ่ม config ไม่ต้องเขียน adapter code ใหม่
+**And** UI components (badges, tables, charts) render dynamic ตาม OTA list
+**And** Prisma schema รองรับ OTA name เป็น string ไม่ใช่ enum (extensible)
+**And** Migration ไม่กระทบ data เดิม
+
+### Story 7.2: Expedia Integration
+
+As a **เจ้าของโรงแรม**,
+I want **เชื่อมต่อ Expedia กับระบบ**,
+So that **ดูราคาและ push ราคาไป Expedia ได้ด้วย**.
+
+**Acceptance Criteria:**
+
+**Given** OTA adapter factory พร้อม
+**When** เจ้าของเลือกเชื่อมต่อ Expedia
+**Then** ระบบเชื่อมต่อผ่าน Channex → Expedia property
+**And** Room type mapping ทำงานเหมือน Agoda/Booking.com
+**And** Rate sync + push ทำงานปกติ
+**And** แสดงบน rate parity view + dashboard
+
+### Story 7.3: Traveloka Integration
+
+As a **เจ้าของโรงแรม**,
+I want **เชื่อมต่อ Traveloka กับระบบ**,
+So that **ครอบคลุมตลาด SEA ที่ Traveloka แข็งแกร่ง**.
+
+**Acceptance Criteria:**
+
+**Given** OTA adapter factory พร้อม
+**When** เจ้าของเลือกเชื่อมต่อ Traveloka
+**Then** ระบบเชื่อมต่อผ่าน Channex → Traveloka
+**And** Room type mapping + rate sync + push ทำงานปกติ
+**And** แสดงบน rate parity view + dashboard
+
+### Story 7.4: Trip.com Integration
+
+As a **เจ้าของโรงแรม**,
+I want **เชื่อมต่อ Trip.com กับระบบ**,
+So that **ครอบคลุมตลาดจีนที่สำคัญสำหรับโรงแรมไทย**.
+
+**Acceptance Criteria:**
+
+**Given** OTA adapter factory พร้อม
+**When** เจ้าของเลือกเชื่อมต่อ Trip.com
+**Then** ระบบเชื่อมต่อผ่าน Channex → Trip.com
+**And** Room type mapping + rate sync + push ทำงานปกติ
+**And** แสดงบน rate parity view + dashboard
+
+---
+
+## Epic 8: Automated Pricing Rules Engine
+
+**Goal:** เจ้าของโรงแรมสร้างกฎปรับราคาอัตโนมัติ ทำงานร่วมกับ AI — ลดการ approve ด้วยมือ
+**FRs:** FR39, FR40
+
+### Story 8.1: Rules Engine Core
+
+As a **developer (Pond)**,
+I want **สร้าง pricing rules engine ที่ evaluate conditions แล้ว trigger price actions**,
+So that **ราคาปรับอัตโนมัติตามกฎที่เจ้าของตั้ง โดยไม่ต้อง approve ทุกครั้ง**.
+
+**Acceptance Criteria:**
+
+**Given** Rules engine schema:
+```
+Rule = { condition: Condition[], action: Action, priority: number, enabled: boolean }
+Condition = { metric: string, operator: string, value: number }
+Action = { type: "adjust_price", direction: "up"|"down", amount: number, unit: "%"|"baht" }
+```
+**When** Cron job evaluate rules
+**Then** ทุก rule ที่ conditions ตรง → execute action
+**And** Actions อยู่ภายใน pricing boundaries เสมอ
+**And** ถ้าหลาย rules match → ใช้ priority สูงสุด
+**And** Rule execution ถูก log ทุกครั้ง
+**And** Prisma models: PricingRule, RuleExecution, RuleCondition
+
+### Story 8.2: Rule Templates & Management UI
+
+As a **เจ้าของโรงแรม**,
+I want **สร้างและจัดการกฎปรับราคาผ่าน UI ที่ง่าย**,
+So that **ตั้งกฎได้โดยไม่ต้องเป็นโปรแกรมเมอร์**.
+
+**Acceptance Criteria:**
+
+**Given** เจ้าของเปิดหน้า pricing rules
+**When** กดสร้างกฎใหม่
+**Then** เลือกจาก template ได้:
+- "ถ้า occupancy > X% → ขึ้นราคา Y%"
+- "ถ้า occupancy < X% → ลดราคา Y%"
+- "วันหยุด/วันพิเศษ → ขึ้นราคา Y%"
+- "ถ้า booking pace สูงกว่าปกติ → ขึ้นราคา Y บาท"
+- "Custom rule" → กำหนดเอง
+**And** สามารถเลือก room types ที่ rule apply
+**And** สามารถ enable/disable แต่ละ rule
+**And** แสดง preview ว่า rule จะมีผลกับราคาอย่างไร
+**And** สามารถแก้ไข/ลบ rules ได้
+
+### Story 8.3: Rule Execution & Monitoring
+
+As a **เจ้าของโรงแรม**,
+I want **ดูว่ากฎทำงานอย่างไร และผลลัพธ์เป็นอย่างไร**,
+So that **มั่นใจว่ากฎทำงานถูกต้อง และปรับแต่งได้**.
+
+**Acceptance Criteria:**
+
+**Given** มี rules ที่ enable อยู่
+**When** เจ้าของเปิดหน้า rule monitoring
+**Then** เห็นรายการ rule executions: วันเวลา, rule ชื่ออะไร, room type, ราคาเปลี่ยนเท่าไหร่
+**And** แสดง success/fail count ต่อ rule
+**And** แสดง revenue impact estimate (ถ้ามีข้อมูลเพียงพอ)
+**And** Alert ถ้า rule trigger ผิดปกติ (เช่น fire บ่อยเกินไป)
+
+### Story 8.4: AI + Rules Hybrid Mode
+
+As a **เจ้าของโรงแรม**,
+I want **AI recommendations ทำงานร่วมกับ rules ได้**,
+So that **กฎจัดการ routine pricing ส่วน AI จัดการ complex situations**.
+
+**Acceptance Criteria:**
+
+**Given** ทั้ง AI recommendations และ rules ทำงานอยู่
+**When** ทั้งสองแนะนำราคาต่างกัน
+**Then** ถ้า rule กับ AI ตรงกัน → auto-execute (ไม่ต้อง approve)
+**And** ถ้า rule กับ AI ขัดกัน → แสดงให้เจ้าของเลือก + อธิบายทั้งสอง
+**And** เจ้าของตั้งค่าได้ว่า rules override AI หรือ AI override rules
+**And** Dashboard แสดง: กี่ครั้งที่ AI กับ rules เห็นตรงกัน vs ขัดกัน
+
+---
+
+## Epic 9: Competitor Radar
+
+**Goal:** ดูราคาคู่แข่งในย่านเดียวกัน + AI นำข้อมูลคู่แข่งมาประกอบการแนะนำราคา
+**FRs:** FR41, FR42, FR43
+
+### Story 9.1: Competitor Data Provider Integration
+
+As a **developer (Pond)**,
+I want **เชื่อมต่อ competitor price data provider**,
+So that **ระบบมีข้อมูลราคาคู่แข่งสำหรับวิเคราะห์**.
+
+**Acceptance Criteria:**
+
+**Given** Data provider API credentials ถูกตั้งค่า (เช่น RateGain, OTA Insight, หรือ scraping service)
+**When** ระบบดึงข้อมูลราคาคู่แข่ง
+**Then** ดึงราคาของ competitor set (5-10 โรงแรมในย่านเดียวกัน) ได้
+**And** ข้อมูลรวม: ชื่อโรงแรม, room type ใกล้เคียง, ราคาต่อ OTA, วันที่
+**And** Sync อย่างน้อยวันละ 1 ครั้ง
+**And** Prisma models: Competitor, CompetitorRate
+**And** Demo mode: ใช้ mock data ที่สมจริง (5 โรงแรมคู่แข่ง)
+
+### Story 9.2: Competitor Dashboard & Radar View
+
+As a **เจ้าของโรงแรม**,
+I want **ดูราคาคู่แข่งเทียบกับราคาของตัวเองบน dashboard**,
+So that **รู้ว่า position ราคาของตัวเองอยู่ตรงไหนเมื่อเทียบกับตลาด**.
+
+**Acceptance Criteria:**
+
+**Given** มีข้อมูลราคาคู่แข่ง
+**When** เจ้าของเปิดหน้า Competitor Radar
+**Then** แสดงตาราง: แถว = วันที่, คอลัมน์ = โรงแรมคู่แข่ง + โรงแรมตัวเอง
+**And** ไฮไลท์ราคาตัวเอง: เขียว (ถูกกว่า), แดง (แพงกว่า), เหลือง (ใกล้เคียง)
+**And** แสดง ranking: โรงแรมเราอยู่อันดับที่เท่าไหร่จากถูกที่สุด
+**And** กราฟเปรียบเทียบ price position ย้อนหลัง 30 วัน
+**And** เลือกดูต่อ room type ได้
+**And** แสดง avg market price + ราคาของเรา vs market
+
+### Story 9.3: AI Competitor-Aware Pricing
+
+As a **เจ้าของโรงแรม**,
+I want **AI นำข้อมูลคู่แข่งมาประกอบการแนะนำราคา**,
+So that **คำแนะนำราคาจาก AI สมจริงกว่าเดิม เพราะรู้ราคาตลาด**.
+
+**Acceptance Criteria:**
+
+**Given** มีข้อมูล competitor rates + OTA data ของตัวเอง
+**When** AI engine สร้างคำแนะนำ
+**Then** AI prompt รวม competitor data: avg market price, position, trend
+**And** เหตุผลคำแนะนำอ้างอิง competitor ได้ เช่น "คู่แข่ง 3/5 แห่งขึ้นราคาแล้ว แนะนำปรับตาม"
+**And** AI ไม่แนะนำราคาที่ undercut ตลาดมากเกิน (เว้นแต่มีเหตุผลชัด)
+**And** Approval rate ของ competitor-aware recommendations ควรสูงกว่า basic recommendations
