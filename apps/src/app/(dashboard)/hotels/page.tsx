@@ -236,6 +236,29 @@ export default function HotelsPage() {
     }
   }
 
+  async function handleRollback(hotelId: string, logId: string) {
+    if (!confirm("ต้องการ rollback ราคากลับเป็นราคาเดิมบน OTA?")) return;
+    try {
+      const res = await fetch(`/api/hotels/${hotelId}/push-history/${logId}/rollback`, {
+        method: "POST",
+      });
+      const data = await res.json();
+      if (res.ok) {
+        setSuccess("Rollback สำเร็จ — ราคาเดิมถูก push กลับไป OTA แล้ว");
+        // Refresh push history
+        const pushRes = await fetch(`/api/hotels/${hotelId}/push-history?limit=5`);
+        if (pushRes.ok) {
+          const pushData = await pushRes.json();
+          setPushHistories((prev) => ({ ...prev, [hotelId]: (pushData.data ?? []).slice(0, 5) }));
+        }
+      } else {
+        setError(data.error ?? "Rollback ล้มเหลว");
+      }
+    } catch {
+      setError("เกิดข้อผิดพลาดในการ rollback");
+    }
+  }
+
   async function handleCreateHotel(e: React.FormEvent) {
     e.preventDefault();
     setError("");
@@ -631,9 +654,21 @@ export default function HotelsPage() {
                                             ฿{entry.newPrice.toLocaleString()}
                                           </span>
                                         </div>
-                                        <span className="text-muted">
-                                          {timeSince(entry.createdAt)}
-                                        </span>
+                                        <div className="d-flex align-items-center gap-2">
+                                          <span className="text-muted">
+                                            {timeSince(entry.createdAt)}
+                                          </span>
+                                          {entry.status === "success" && (
+                                            <Button
+                                              variant="outline-warning"
+                                              size="sm"
+                                              style={{ fontSize: "0.6rem", padding: "1px 6px" }}
+                                              onClick={() => handleRollback(hotel.id, entry.id)}
+                                            >
+                                              Rollback
+                                            </Button>
+                                          )}
+                                        </div>
                                       </div>
                                     ))}
                                   </div>
