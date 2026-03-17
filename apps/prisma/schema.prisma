@@ -39,6 +39,21 @@ enum SyncStatus {
   FAILED
 }
 
+enum RecommendationStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+}
+
+enum RejectionReason {
+  LOCAL_EVENT
+  PRICE_TOO_HIGH
+  PRICE_TOO_LOW
+  MARKET_KNOWLEDGE
+  OTHER
+}
+
 // === Models (Epic 1) ===
 
 model User {
@@ -54,9 +69,11 @@ model User {
   updatedAt           DateTime  @updatedAt
   deletedAt           DateTime?
 
-  ownedHotels     Hotel[]      @relation("HotelOwner")
-  hotelAccess     HotelUser[]
-  sentInvitations Invitation[] @relation("InvitationSender")
+  ownedHotels      Hotel[]          @relation("HotelOwner")
+  hotelAccess      HotelUser[]
+  sentInvitations  Invitation[]     @relation("InvitationSender")
+  decisions        Recommendation[] @relation("RecommendationDecider")
+  auditLogs        AuditLog[]       @relation("AuditUser")
 }
 
 model Hotel {
@@ -72,11 +89,13 @@ model Hotel {
 
   members        HotelUser[]
   invitations    Invitation[]
-  otaConnections OtaConnection[]
-  roomTypes      RoomType[]
-  rateSnapshots  RateSnapshot[]
-  bookings       Booking[]
-  syncLogs       SyncLog[]
+  otaConnections  OtaConnection[]
+  roomTypes       RoomType[]
+  rateSnapshots   RateSnapshot[]
+  bookings        Booking[]
+  syncLogs        SyncLog[]
+  recommendations Recommendation[]
+  auditLogs       AuditLog[]
 }
 
 model HotelUser {
@@ -135,9 +154,10 @@ model RoomType {
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
-  otaMappings   OtaRoomMapping[]
-  rateSnapshots RateSnapshot[]
-  bookings      Booking[]
+  otaMappings     OtaRoomMapping[]
+  rateSnapshots   RateSnapshot[]
+  bookings        Booking[]
+  recommendations Recommendation[]
 }
 
 model OtaRoomMapping {
@@ -201,4 +221,46 @@ model SyncLog {
   itemCount   Int         @default(0)
   startedAt   DateTime    @default(now())
   completedAt DateTime?
+}
+
+// === Models (Epic 3) ===
+
+model Recommendation {
+  id               String               @id @default(uuid())
+  hotelId          String
+  hotel            Hotel                @relation(fields: [hotelId], references: [id])
+  roomTypeId       String
+  roomType         RoomType             @relation(fields: [roomTypeId], references: [id])
+  targetDate       DateTime             @db.Date
+  currentPrice     Int
+  recommendedPrice Int
+  changePercent    Float
+  changeDirection  String
+  reason           String
+  status           RecommendationStatus @default(PENDING)
+  rejectionReason  RejectionReason?
+  rejectionNote    String?
+  decidedAt        DateTime?
+  decidedById      String?
+  decidedBy        User?                @relation("RecommendationDecider", fields: [decidedById], references: [id])
+  expiresAt        DateTime
+  createdAt        DateTime             @default(now())
+
+  @@index([hotelId, status])
+  @@index([hotelId, targetDate])
+}
+
+model AuditLog {
+  id         String   @id @default(uuid())
+  hotelId    String
+  hotel      Hotel    @relation(fields: [hotelId], references: [id])
+  userId     String?
+  user       User?    @relation("AuditUser", fields: [userId], references: [id])
+  action     String
+  entityType String
+  entityId   String
+  details    Json?
+  createdAt  DateTime @default(now())
+
+  @@index([hotelId, createdAt])
 }
