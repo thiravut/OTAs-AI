@@ -44,6 +44,7 @@ vi.mock('@/lib/db/prisma', () => ({
     },
     roomType: {
       findUnique: vi.fn(),
+      findFirst: vi.fn(),
       findMany: vi.fn(),
       create: vi.fn(),
       update: vi.fn(),
@@ -79,6 +80,16 @@ vi.mock('@/lib/db/prisma', () => ({
     },
     auditLog: {
       create: vi.fn(),
+    },
+    priceUpdateLog: {
+      findUnique: vi.fn(),
+      findMany: vi.fn(),
+      create: vi.fn(),
+      update: vi.fn(),
+      count: vi.fn(),
+    },
+    otaRoomMapping: {
+      findMany: vi.fn(),
     },
     notificationLog: {
       count: vi.fn(),

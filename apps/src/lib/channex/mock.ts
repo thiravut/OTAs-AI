@@ -3,7 +3,10 @@ import type {
   ChannexRoomType,
   ChannexRate,
   ChannexBooking,
+  ChannexRateUpdate,
+  ChannexRateUpdateResult,
 } from "./types";
+import { logger } from "@/lib/logger";
 
 export function getMockProperties(): ChannexProperty[] {
   return [
@@ -110,4 +113,19 @@ export function getMockBookings(_propertyId: string): ChannexBooking[] {
   }
 
   return bookings;
+}
+
+export function mockUpdateRates(
+  updates: ChannexRateUpdate[]
+): ChannexRateUpdateResult[] {
+  logger.info("[DEMO] Channex rate push skipped (mock mode)", {
+    action: "mock_rate_push",
+    count: updates.length,
+  });
+
+  return updates.map((u) => ({
+    success: true,
+    roomTypeId: u.roomTypeId,
+    date: u.date,
+  }));
 }

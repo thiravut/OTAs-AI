@@ -75,6 +75,7 @@ model User {
   decisions        Recommendation[] @relation("RecommendationDecider")
   auditLogs          AuditLog[]         @relation("AuditUser")
   verificationCodes  VerificationCode[]
+  priceUpdates       PriceUpdateLog[]   @relation("PriceUpdateUser")
 }
 
 model Hotel {
@@ -97,6 +98,7 @@ model Hotel {
   syncLogs        SyncLog[]
   recommendations Recommendation[]
   auditLogs       AuditLog[]
+  priceUpdateLogs PriceUpdateLog[]
 }
 
 model HotelUser {
@@ -159,6 +161,7 @@ model RoomType {
   rateSnapshots   RateSnapshot[]
   bookings        Booking[]
   recommendations Recommendation[]
+  priceUpdateLogs PriceUpdateLog[]
 }
 
 model OtaRoomMapping {
@@ -276,4 +279,29 @@ model VerificationCode {
   code      String   @unique
   expiresAt DateTime
   createdAt DateTime @default(now())
+}
+
+// === Models (MVP-1: Epic 6) ===
+
+model PriceUpdateLog {
+  id               String    @id @default(uuid())
+  hotelId          String
+  hotel            Hotel     @relation(fields: [hotelId], references: [id])
+  roomTypeId       String
+  roomType         RoomType  @relation(fields: [roomTypeId], references: [id])
+  otaName          String
+  targetDate       DateTime  @db.Date
+  previousPrice    Int       // satang
+  newPrice         Int       // satang
+  status           String    // PENDING, SUCCESS, FAILED, ROLLED_BACK
+  channexResponse  Json?
+  error            String?
+  triggeredBy      String    // recommendation_approve, manual, rule
+  recommendationId String?
+  userId           String?
+  user             User?     @relation("PriceUpdateUser", fields: [userId], references: [id])
+  createdAt        DateTime  @default(now())
+
+  @@index([hotelId, createdAt])
+  @@index([status])
 }

@@ -45,3 +45,17 @@ export interface ChannexAvailability {
   available: number;
   total: number;
 }
+
+export interface ChannexRateUpdate {
+  roomTypeId: string;
+  date: string;
+  rate: number;
+  currency: string;
+}
+
+export interface ChannexRateUpdateResult {
+  success: boolean;
+  roomTypeId: string;
+  date: string;
+  error?: string;
+}

@@ -5,12 +5,15 @@ import type {
   ChannexRoomType,
   ChannexRate,
   ChannexBooking,
+  ChannexRateUpdate,
+  ChannexRateUpdateResult,
 } from "./types";
 import {
   getMockProperties,
   getMockRoomTypes,
   getMockRates,
   getMockBookings,
+  mockUpdateRates,
 } from "./mock";
 
 const CHANNEX_API_BASE = "https://app.channex.io/api/v1";
@@ -109,6 +112,47 @@ export async function getPropertyBookings(
         `/properties/${propertyId}/bookings`
       ).then((r) => r.data),
     { context: "channex.getPropertyBookings" }
+  );
+}
+
+/** Push a single rate update to Channex */
+export async function updateRate(
+  propertyId: string,
+  update: ChannexRateUpdate
+): Promise<ChannexRateUpdateResult> {
+  return updateRates(propertyId, [update]).then((r) => r[0]);
+}
+
+/** Push multiple rate updates in a single Channex API call */
+export async function updateRates(
+  propertyId: string,
+  updates: ChannexRateUpdate[]
+): Promise<ChannexRateUpdateResult[]> {
+  if (isUsingMock()) return mockUpdateRates(updates);
+
+  return withRetry(
+    async () => {
+      const body = {
+        rates: updates.map((u) => ({
+          room_type_id: u.roomTypeId,
+          date: u.date,
+          rate: u.rate,
+          currency: u.currency,
+        })),
+      };
+
+      await channexFetch(`/properties/${propertyId}/rates`, {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+
+      return updates.map((u) => ({
+        success: true,
+        roomTypeId: u.roomTypeId,
+        date: u.date,
+      }));
+    },
+    { context: "channex.updateRates" }
   );
 }
 
