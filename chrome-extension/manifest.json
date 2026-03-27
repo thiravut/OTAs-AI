@@ -1,0 +1,27 @@
+{
+  "manifest_version": 3,
+  "name": "RateGenie Scraper (Test)",
+  "version": "0.0.1",
+  "description": "ทดสอบดึงราคาคู่แข่งจาก OTA",
+  "content_scripts": [
+    {
+      "matches": ["https://www.agoda.com/*"],
+      "js": ["content-scripts/agoda.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": ["https://www.booking.com/*"],
+      "js": ["content-scripts/booking.js"],
+      "run_at": "document_idle"
+    },
+    {
+      "matches": [
+        "https://www.google.com/travel/hotels/*",
+        "https://www.google.co.th/travel/hotels/*"
+      ],
+      "js": ["content-scripts/google-hotels.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "permissions": ["activeTab"]
+}

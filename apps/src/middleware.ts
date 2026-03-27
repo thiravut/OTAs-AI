@@ -13,17 +13,26 @@ function isPublicPath(pathname: string) {
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Allow public paths
-  if (isPublicPath(pathname)) {
-    return NextResponse.next();
-  }
-
   // Allow static assets
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/favicon") ||
     pathname.includes(".")
   ) {
+    return NextResponse.next();
+  }
+
+  // Auth pages: redirect authenticated users to /overview
+  if (pathname === "/login" || pathname === "/register") {
+    const token = await getToken({ req: request });
+    if (token) {
+      return NextResponse.redirect(new URL("/overview", request.url));
+    }
+    return NextResponse.next();
+  }
+
+  // Allow other public paths
+  if (isPublicPath(pathname)) {
     return NextResponse.next();
   }
 
@@ -39,11 +48,6 @@ export async function middleware(request: NextRequest) {
     }
     // Pages redirect to login
     return NextResponse.redirect(new URL("/login", request.url));
-  }
-
-  // Redirect authenticated users away from auth pages
-  if (pathname === "/login" || pathname === "/register") {
-    return NextResponse.redirect(new URL("/overview", request.url));
   }
 
   return NextResponse.next();
